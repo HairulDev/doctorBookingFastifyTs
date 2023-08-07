@@ -11,9 +11,17 @@ const getDoctors = async (request: FastifyRequest, reply: FastifyReply, fastify:
 }
 
 const getDoctor = async (request: FastifyRequest, reply: FastifyReply, fastify: FastifyInstance): Promise<void> => {
-    const { id }: any = request.params;
+    const authorizationHeader : any = request.headers['authorization'];
+    const decodedToken = fastify.decodedToken(authorizationHeader.slice(7));
     try {
-        const { data } = await fastify.supabase.from('profile').select().eq('id', id).single();
+        const { data } = await fastify.supabase
+        .from('profile')
+        .select(`
+        *,
+        schedule(*)
+        `)
+        .eq('email', decodedToken.email)
+        .single();
         return reply.status(200).send({ message: "Doctor retrieved successfull", success: true, data});
     } catch (error) {
         return reply.status(500).send({ message: error });
@@ -78,9 +86,54 @@ const generateTimeSlots = async (scheduleData: any, reply: FastifyReply, fastify
 };
 
 
+const scheduleDoctor = async (request: FastifyRequest, reply: FastifyReply, fastify: FastifyInstance): Promise<void> => {
+    const authorizationHeader : any = request.headers['authorization'];
+    const decodedToken = fastify.decodedToken(authorizationHeader.slice(7));
+    const body: any = request.body;
+    const date = body.availableFrom.slice(0, 10);
+    const availableFrom = body.availableFrom.slice(0, 10);
+    const availableTo = body.availableTo.slice(0, 10);
+
+    try {
+        if(availableFrom !== availableTo) return reply.status(400).send({ message: 'Date not same', success: false });
+       
+        const { data: id }: any = await fastify.supabase
+        .from('profile')
+        .select('id')
+        .eq('email', decodedToken.email)
+        .single();
+
+        const { data: checkDate }: any = await fastify.supabase
+        .from('schedule')
+        .select('date')
+        .eq('doctorId', id.id)
+        .eq('date', date)
+        .single();
+        if(checkDate) return reply.status(400).send({ message: 'Schedule duplicate', success: false });
+
+
+        const { error }: any = await fastify.supabase
+        .from('schedule')
+        .insert({
+            doctorId: id.id,
+            availableFrom: body.availableFrom,
+            availableTo: body.availableTo,
+            date
+        })
+        if (error) return reply.status(400).send({ message: error, success: false });
+        return reply.status(200).send({
+            success: true,
+            message: "Schedule doctor successful"
+        });
+    } catch (error) {
+        return reply.status(500).send({ message: error });
+    }
+  }
+
 
 export default {
     getDoctors,
     getDoctor,
     getScheduleDoctor,
+    scheduleDoctor,
 }
