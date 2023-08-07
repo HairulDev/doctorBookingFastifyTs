@@ -130,10 +130,25 @@ const scheduleDoctor = async (request: FastifyRequest, reply: FastifyReply, fast
     }
   }
 
+  const delSchedule = async (request: FastifyRequest, reply: FastifyReply, fastify: FastifyInstance): Promise<void> => {
+    const { id }: any = request.params;
+  
+    try {
+        const { error }: any = await fastify.supabase.from('schedule').delete().eq('id', id);
+        if (error) return reply.status(400).send({ message: error, success: false });
+        return reply.status(200).send({
+            success: true,
+            message: "Delete schedule successful"
+        });
+    } catch (error) {
+        return reply.status(500).send({ message: error });
+    }
+  }
 
 export default {
     getDoctors,
     getDoctor,
     getScheduleDoctor,
     scheduleDoctor,
+    delSchedule,
 }

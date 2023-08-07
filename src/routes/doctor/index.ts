@@ -2,7 +2,7 @@
 import { FastifyPluginAsync, } from 'fastify';
 
 import doctorController from '../../controllers/doctor.controller';
-const { getDoctors, getDoctor, getScheduleDoctor, scheduleDoctor} = doctorController;
+const { getDoctors, getDoctor, getScheduleDoctor, scheduleDoctor, delSchedule} = doctorController;
 
 const doctor: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     fastify.get('/', async function (request, reply) {
@@ -19,6 +19,10 @@ const doctor: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
 
     fastify.post('/schedule', async function (request, reply) {
         return scheduleDoctor(request, reply, fastify);
+    })
+
+    fastify.delete('/schedule/:id', async function (request, reply) {
+        return delSchedule(request, reply, fastify);
     })
 };
 
